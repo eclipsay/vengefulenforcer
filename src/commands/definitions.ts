@@ -17,11 +17,9 @@ export const definitions: Definition[] = [
     options: ['clear','slowmode'].includes(name) ? [option('amount',name === 'clear' ? 'Messages to remove (1–100)' : 'Slowmode seconds (0–21600)')] : [] })),
   { name:'globalban', aliases:['gban','gb'], description:'Ban across every server the bot is in', category:'Global Enforcement', permission:'global', options:[user,reason,option('evidence','Optional evidence URL',false,false)] },
   { name:'globalunban', aliases:['gunban'], description:'Revoke an active global ban', category:'Global Enforcement', permission:'global', options:[user,reason] },
-  { name:'history', aliases:['hist','record'], description:'Permanent subject record', category:'User Records', permission:'moderator', options:[user] },
-  { name:'warnings', description:'List permanent warnings', category:'User Records', permission:'moderator', options:[user] },
+  { name:'notes', aliases:['warnings','history','hist','record'], description:'User notes and moderation record', category:'Notes', permission:'moderator', options:[user] },
   { name:'note', description:'Permanent staff notes', category:'Notes', permission:'moderator', subcommands:[
     { name:'add', description:'Add a note', options:[user,option('text','Note content',true)] },
-    { name:'list', description:'List notes', options:[user] },
     { name:'edit', description:'Edit a note with an audit trail', options:[noteId,option('text','Replacement content',true)] },
     { name:'remove', description:'Soft-delete a note', options:[noteId] },
   ] },

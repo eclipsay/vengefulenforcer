@@ -17,9 +17,8 @@ describe('Discord user ID support',()=> {
   const routes=[
     ...['ban','unban','kick','timeout','untimeout','warn'].map(name=>({name,sub:undefined,service:'moderation',method:'punish',targetIndex:2,extra:name==='timeout'?{duration:'1h',reason:'Reason'}:{reason:'Reason'}})),
     ...['globalban','globalunban'].map(name=>({name,sub:undefined,service:'global',method:name==='globalban'?'globalBan':'globalUnban',targetIndex:1,extra:{reason:'Reason'}})),
-    ...['history','warnings'].map(name=>({name,sub:undefined,service:'records',method:'history',targetIndex:1,extra:{}})),
+    ...['notes','warnings','history'].map(name=>({name,sub:undefined,service:'records',method:'notes',targetIndex:1,extra:{}})),
     {name:'note',sub:'add',service:'records',method:'note',targetIndex:2,extra:{text:'Note text'}},
-    {name:'note',sub:'list',service:'records',method:'notes',targetIndex:1,extra:{}},
   ];
   it.each(routes)('$name $sub accepts IDs and mentions through both command systems',async route=> {
     for(const input of [target,`<@${target}>`,`<@!${target}>`]) {

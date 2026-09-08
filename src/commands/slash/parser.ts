@@ -2,7 +2,7 @@ import type { ChatInputCommandInteraction } from 'discord.js';
 import { definitions } from '../definitions.js';
 import type { Invocation } from '../prefix/parser.js';
 export function parseSlash(interaction: ChatInputCommandInteraction): Invocation | null {
-  const definition = definitions.find(d => d.name === interaction.commandName);
+  const definition = definitions.find(d => d.name === interaction.commandName || d.aliases?.includes(interaction.commandName));
   if (!definition) return null;
   const sub = interaction.options.getSubcommand(false) ?? undefined;
   const options = definition.subcommands?.find(s => s.name === sub)?.options ?? definition.options ?? [];

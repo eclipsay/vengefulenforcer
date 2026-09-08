@@ -15,10 +15,8 @@ export function createRegistry(s: Services, prefix: string) {
     say(ctx, await s.channel.run(ctx, action, action === 'clear' ? integer(a.amount,1,100) : action === 'slowmode' ? integer(a.amount,0,21600) : undefined)));
   handlers.set('globalban', async (ctx,a) => say(ctx, await s.global.globalBan(ctx,userId(a.user),required(a.reason),a.evidence ? evidenceUrl(a.evidence) : undefined)));
   handlers.set('globalunban', async (ctx,a) => say(ctx, await s.global.globalUnban(ctx,userId(a.user),required(a.reason))));
-  handlers.set('history', async (ctx,a) => paginate(ctx,p => s.records.history(ctx,userId(a.user),p)));
-  handlers.set('warnings', async (ctx,a) => paginate(ctx,p => s.records.history(ctx,userId(a.user),p,true)));
+  handlers.set('notes', async (ctx,a) => paginate(ctx,p => s.records.notes(ctx,userId(a.user),p)));
   handlers.set('note', async (ctx,a,sub) => {
-    if (sub === 'list') return paginate(ctx,p => s.records.notes(ctx,userId(a.user),p));
     return say(ctx,await s.records.note(ctx,sub!,sub === 'add' ? userId(a.user) : integer(a.id,1,2147483647),a.text));
   });
   handlers.set('config', async (ctx,a,sub) => {

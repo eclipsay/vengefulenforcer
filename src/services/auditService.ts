@@ -10,7 +10,18 @@ export class AuditService {
   }
   async log(guildId: string, actorId: string, action: string, details: Prisma.InputJsonObject, userId?: string) {
     await this.record(guildId, actorId, action, details, userId);
-    await this.deliver(guildId, action, `Actor: ${discordMention(actorId)}${userId ? `\nSubject: ${userRef(userId)}` : ''}\n${JSON.stringify(details)}`);
+    const summary = (() => {
+      const reason = typeof details.reason === 'string' ? details.reason : undefined;
+      const dm = typeof details.dm === 'string' ? details.dm : undefined;
+      const recordId = typeof details.recordId === 'number' ? details.recordId : undefined;
+      const lines = [`Moderator: ${discordMention(actorId)}`];
+      if (userId) lines.push(`Subject: ${userRef(userId)}`);
+      if (reason) lines.push(`Reason: ${reason}`);
+      if (recordId) lines.push(`Case: VE-${String(recordId).padStart(6, '0')}`);
+      if (dm) lines.push(`DM Status: ${dm}`);
+      return lines.join('\n');
+    })();
+    await this.deliver(guildId, action, summary);
   }
   async deliver(guildId: string, title: string, description: string) {
     try {
