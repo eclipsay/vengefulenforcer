@@ -1,5 +1,5 @@
 import { describe,it,expect } from 'vitest';
-import { caseNumber,duration,id,integer,SerialQueue,evidenceUrl } from '../src/utils/core.js';
+import { caseNumber,duration,id,integer,SerialQueue,evidenceUrl,discordMention } from '../src/utils/core.js';
 import { parsePrefix } from '../src/commands/prefix/parser.js';
 import { parseSlash } from '../src/commands/slash/parser.js';
 import { definitions,slashDefinitions } from '../src/commands/definitions.js';
@@ -15,13 +15,17 @@ describe('input and routing',()=> {
     expect(()=>integer('101',1,100)).toThrow(); expect(()=>integer('1x',1,100)).toThrow();
     expect(()=>evidenceUrl('javascript:alert(1)')).toThrow();
   });
+  it('renders user IDs as Discord mentions for logs and displays',()=> {
+    expect(discordMention('123456789012345678')).toBe('<@123456789012345678>');
+    expect(discordMention('bad')).toBe('bad');
+  });
   it('parses free-form reasons, aliases and optional evidence',()=> {
     const result=parsePrefix('-gb 123456789012345678 Ban evasion --evidence https://example.com/proof','-')!;
     expect(result.definition.name).toBe('globalban');
     expect(result.args).toEqual({user:'123456789012345678',reason:'Ban evasion',evidence:'https://example.com/proof'});
-    expect(parsePrefix('-case VE-000003','-')?.sub).toBe('view');
+    expect(parsePrefix('-case VE-000003','-')).toBeNull();
     expect(parsePrefix('-config','-')?.sub).toBe('view');
-    expect(()=>parsePrefix('-enforcement remove 123456789012345678 --cleanup','-')).toThrow();
+    expect(parsePrefix('-enforcement list','-')).toBeNull();
   });
   it('prefix and slash produce identical warning invocations',()=> {
     const values={user:'123456789012345678',reason:'Repeated spam'};
@@ -33,6 +37,10 @@ describe('input and routing',()=> {
     expect(commands).toHaveLength(definitions.length);
     expect(new Set(commands.map(c=>c.name)).size).toBe(commands.length);
     expect(commands.find(c=>c.name==='warn')?.options?.map(o=>o.name)).toEqual(['user','reason']);
+    for (const name of ['case','enforcement','globalmods','permissions','protected','network','sync','servers','serverinfo']) {
+      expect(commands.some(c=>c.name===name)).toBe(false);
+    }
+    expect(commands.some(c=>c.name==='globalunban')).toBe(true);
     for (const def of definitions) {
       const options=def.subcommands?.map(s=>s.options??[]) ?? [def.options??[]];
       for (const list of options) { let optional=false; for(const o of list) { if(o.required===false) optional=true; else expect(optional).toBe(false); } }

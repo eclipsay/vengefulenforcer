@@ -2,7 +2,7 @@ import type { Database } from '../database/client.js';
 import type { GlobalBanService } from './globalBanService.js';
 import type { AuditService } from './auditService.js';
 export class BanSyncService {
-  constructor(private db: Database, private global: GlobalBanService, private audit: AuditService, private controlId: string, private botId: string) {}
+  constructor(private db: Database, private global: GlobalBanService, private audit: AuditService, private botId: string) {}
   async run(actorId = this.botId) {
     // Unban work was saved atomically with revocation; replay it even after a crash.
     const unfinished = await this.db.moderationCase.findMany({ where: { scope: 'GLOBAL', status: { in: ['PENDING','PARTIAL'] } } });
@@ -27,7 +27,8 @@ export class BanSyncService {
       }
       cursor = bans.at(-1)!.userId;
     }
-    await this.audit.log(this.controlId, actorId, 'Global ban synchronization performed.', report);
+    // Retain the report without announcing routine sync completion in Discord.
+    for (const guild of guilds) await this.audit.record(guild.guildId, actorId, 'Global bans synchronized', report);
     return report;
   }
 }

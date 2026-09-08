@@ -28,6 +28,8 @@ describe('PostgreSQL migration and durable records',()=> {
     }
   });
   it('retains warnings, notes, global bans, registry and delivery status across engine restart',async()=> {
+    await db.exec(await readFile(new URL('../prisma/migrations/20260908010000_simple_channels/migration.sql',import.meta.url),'utf8'));
+    await db.exec(`INSERT INTO "GuildConfig" ("guildId","globalCommandChannelId","updatedAt") VALUES ('guild','commands',NOW())`);
     await db.close();db=new PGlite(directory);await db.waitReady;
     const result=await db.query<any>('SELECT action,status FROM "ModerationCase"');
     expect(result.rows).toEqual([{action:'WARN',status:'SUCCESS'}]);
@@ -35,6 +37,7 @@ describe('PostgreSQL migration and durable records',()=> {
     expect((await db.query<any>('SELECT active FROM "GlobalBan"')).rows[0].active).toBe(true);
     expect((await db.query<any>('SELECT name FROM "EnforcementGuild"')).rows[0].name).toBe('Test Guild');
     expect((await db.query<any>('SELECT status FROM "Notification"')).rows[0].status).toBe('FAILED');
+    expect((await db.query<any>('SELECT "globalCommandChannelId" FROM "GuildConfig"')).rows[0].globalCommandChannelId).toBe('commands');
   },30000);
   it('rejects duplicate request IDs and duplicate notifications',async()=> {
     await expect(db.exec(`INSERT INTO "ModerationCase" ("requestId","userId","moderatorId","moderatorName","guildId","guildName",action,reason,"updatedAt") VALUES ('warning-request','123456789012345678','staff','Moderator','guild','Guild','WARN','Duplicate',NOW())`)).rejects.toThrow(/unique/i);

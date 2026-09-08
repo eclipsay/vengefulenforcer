@@ -1,5 +1,14 @@
 import { EmbedBuilder } from 'discord.js';
 export class UserError extends Error {}
+export function userId(value: string | undefined): string {
+  const match = value?.trim().match(/^(?:<@!?(\d{17,20})>|(\d{17,20}))$/);
+  const target = match?.[1] ?? match?.[2];
+  if (!target || BigInt(target) > 18446744073709551615n) {
+    throw new UserError('Provide a Discord user ID or an actual @user mention, not a username, role or channel.');
+  }
+  // Never convert a snowflake to Number: that would round many real Discord IDs.
+  return target;
+}
 export function id(value: string | undefined): string {
   const result = value?.match(/^(?:<@!?(\d{17,20})>|<#(\d{17,20})>|<@&(\d{17,20})>|(\d{17,20}))$/);
   if (!result) throw new UserError('Provide a valid Discord ID or mention.');
@@ -15,10 +24,18 @@ export function integer(value: string | undefined, min: number, max: number): nu
   if (!Number.isSafeInteger(n) || n < min || n > max) throw new UserError(`Enter a whole number from ${min} to ${max}.`);
   return n;
 }
+export function discordMention(value: string | undefined): string {
+  if (!value) return 'Unknown';
+  return /^\d{17,20}$/.test(value) ? `<@${value}>` : value;
+}
+export function userRef(value: string | undefined): string {
+  if (!value) return 'Unknown';
+  return /^\d{17,20}$/.test(value) ? `${discordMention(value)} (${value})` : value;
+}
 export function duration(value: string | undefined): number {
-  const m = value?.match(/^(\d+)(s|m|h|d)$/);
-  if (!m) throw new UserError('Use a duration such as 30m, 1h or 7d (maximum 28 days).');
-  const n = Number(m[1]) * ({ s: 1, m: 60, h: 3600, d: 86400 }[m[2]]!);
+  const m = value?.match(/^(\d+)(s|m|h|d|w|mo|y)$/i);
+  if (!m) throw new UserError('Use a duration such as 30m, 1h, 7d, 1w, 1mo or 1y (maximum 28 days for Discord timeouts).');
+  const n = Number(m[1]) * ({ s: 1, m: 60, h: 3600, d: 86400, w: 604800, mo: 2592000, y: 31536000 }[m[2].toLowerCase()]!);
   if (n < 1 || n > 2419200) throw new UserError('Timeout must be between 1 second and 28 days.');
   return n;
 }

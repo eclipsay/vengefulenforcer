@@ -92,6 +92,7 @@ model CaseAuditLog {
 }
 model GuildConfig {
   guildId String @id
+  globalCommandChannelId String?
   logChannelId String?
   moderatorRoleId String?
   adminRoleId String?

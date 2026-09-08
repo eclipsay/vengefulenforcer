@@ -1,7 +1,7 @@
 import type { Client } from 'discord.js';
 import type { ModerationCase } from '@prisma/client';
 import type { Database } from '../database/client.js';
-import { caseNumber, embed, errorText } from '../utils/core.js';
+import { embed, errorText } from '../utils/core.js';
 
 export class NotificationService {
   constructor(private db: Database, private client: Client) {}
@@ -17,7 +17,7 @@ export class NotificationService {
     try {
       const user = await this.client.users.fetch(record.userId);
       await user.send({ embeds: [embed(warning ? 'WARNING NOTICE' : 'BAN NOTICE',
-        `${text}\n\nReason: ${record.reason}\nCase: **${caseNumber(record.id)}**\nDate: ${record.createdAt.toISOString()}\n\nContact the server staff if you wish to discuss this action.`)], allowedMentions: { parse: [] } });
+        `${text}\n\nReason: ${record.reason}\nDate: ${record.createdAt.toISOString()}\n\nContact the server staff if you wish to discuss this action.`)], allowedMentions: { parse: [] } });
     } catch (err) { status = 'FAILED'; error = errorText(err); }
     await this.db.notification.update({ where: { id: notification.id }, data: { status, error } });
     return status;

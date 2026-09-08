@@ -9,11 +9,12 @@ function notificationFixture(fail=false) {
   return {db,client,send,service:new NotificationService(db as any,client as any)};
 }
 describe('warning and ban DMs',()=> {
-  it('includes server, reason, case number and date',async()=> {
+  it('includes server, reason and date without case numbers',async()=> {
     const f=notificationFixture(); expect(await f.service.send(record as any)).toBe('SENT');
     const payload=f.send.mock.calls[0][0];
     expect(payload.embeds[0].toJSON().description).toContain('Repeated spam');
-    expect(payload.embeds[0].toJSON().description).toContain('VE-000042');
+    expect(payload.embeds[0].toJSON().description).not.toContain('VE-000042');
+    expect(payload.embeds[0].toJSON().description).not.toContain('Case:');
     expect(payload.embeds[0].toJSON().description).toContain('Test Guild');
     expect(payload.allowedMentions).toEqual({parse:[]});
     expect(f.db.notification.update).toHaveBeenCalledWith(expect.objectContaining({data:{status:'SENT',error:undefined}}));
@@ -55,7 +56,7 @@ describe('moderation service durability',()=> {
   });
   it('records Discord failure without reporting successful punishment',async()=> {
     const f=moderationFixture('BAN');f.ban.mockRejectedValue(new Error('Missing permissions'));
-    expect(await f.service.punish(f.ctx,'BAN',record.userId,'Spam')).toContain('action failed');
+    expect(await f.service.punish(f.ctx,'BAN',record.userId,'Spam')).toContain('Action failed');
     expect(f.db.moderationCase.update).toHaveBeenCalledWith(expect.objectContaining({data:expect.objectContaining({status:'FAILED'})}));
   });
   it('denies unauthorized punishment before creating a case or DM',async()=> {
@@ -65,7 +66,7 @@ describe('moderation service durability',()=> {
   });
   it('deduplicates repeated Discord requests',async()=> {
     const f=moderationFixture('WARN');f.db.moderationCase.findUnique.mockResolvedValue({...record,status:'SUCCESS'});
-    expect(await f.service.punish(f.ctx,'WARN',record.userId,'Spam')).toContain('already recorded');
+    expect(await f.service.punish(f.ctx,'WARN',record.userId,'Spam')).toContain('already processed');
     expect(f.cases.create).not.toHaveBeenCalled();expect(f.notifications.send).not.toHaveBeenCalled();
   });
 });

@@ -9,8 +9,7 @@ export function parsePrefix(content: string, prefix: string): Invocation | null 
   if (!definition) return null;
   let sub: string | undefined;
   if (definition.subcommands) {
-    if (definition.name === 'case' && /^VE-\d+$/i.test(tokens[0] ?? '')) sub = 'view';
-    else sub = tokens.shift()?.toLowerCase() ?? ({ config:'view',globalmods:'list',permissions:'list',protected:'list',enforcement:'list' } as Record<string,string>)[definition.name];
+    sub = tokens.shift()?.toLowerCase() ?? ({ config:'view' } as Record<string,string>)[definition.name];
     if (!definition.subcommands.some(s => s.name === sub)) throw new UserError(`Use ${prefix}${definition.name} ${definition.subcommands.map(s => s.name).join('|')}.`);
   }
   const options = definition.subcommands?.find(s => s.name === sub)?.options ?? definition.options ?? [];

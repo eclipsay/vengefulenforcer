@@ -35,7 +35,7 @@ export function attachEvents(client: Client, s: Services, logger: Logger, prefix
     });
   });
   client.on(Events.InteractionCreate,interaction=> {
-    // Message component collectors own confirmation and pagination interactions.
+    // Message component collectors own pagination interactions.
     if (!interaction.isChatInputCommand()) return;
     safe(async()=> {
       try {
@@ -69,13 +69,9 @@ export function attachEvents(client: Client, s: Services, logger: Logger, prefix
   client.on(Events.GuildBanAdd,ban=>safe(()=>s.queue.run(()=>s.audit.log(ban.guild.id,client.user!.id,'DISCORD_BAN_OBSERVED',{ observed:true },ban.user.id))));
   client.on(Events.GuildCreate,guild=>safe(()=>s.queue.run(async()=> {
     await s.db.guildConfig.upsert({ where:{ guildId:guild.id },create:{ guildId:guild.id },update:{} });
-    // Re-invitation requires an explicit enable, preserving registry history.
-    await s.db.enforcementGuild.updateMany({ where:{ guildId:guild.id },data:{ active:true,enabled:false,name:guild.name } });
-    try { const owner=await guild.fetchOwner(); await owner.send('Vengeful Enforcer has been installed, but this Discord has not been registered/enabled with the enforcement network. A Main Server administrator must use -enforcement add <guild_id> or -enforcement enable <guild_id>.'); }
-    catch (err) { logger.warn({err,guildId:guild.id},'Owner notification failed'); }
+    await s.sync.run();
   })));
   client.on(Events.GuildDelete,guild=>safe(()=>s.queue.run(async()=> {
-    await s.db.enforcementGuild.updateMany({ where:{ guildId:guild.id },data:{ active:false,enabled:false } });
     await s.audit.log(guild.id,client.user!.id,'GUILD_LEFT',{ guildId:guild.id });
   })));
   client.on(Events.Error,err=>logger.error({err},'Discord client error'));

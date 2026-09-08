@@ -2,12 +2,15 @@ import type { Client } from 'discord.js';
 import type { Prisma } from '@prisma/client';
 import type { Logger } from 'pino';
 import type { Database } from '../database/client.js';
-import { embed } from '../utils/core.js';
+import { discordMention, embed, userRef } from '../utils/core.js';
 export class AuditService {
   constructor(private db: Database, private client: Client, private logger: Logger) {}
-  async log(guildId: string, actorId: string, action: string, details: Prisma.InputJsonObject, userId?: string) {
+  async record(guildId: string, actorId: string, action: string, details: Prisma.InputJsonObject, userId?: string) {
     await this.db.moderatorAction.create({ data: { guildId, actorId, action, details, userId } });
-    await this.deliver(guildId, action, `Actor: ${actorId}${userId ? `\nSubject: ${userId}` : ''}\n${JSON.stringify(details)}`);
+  }
+  async log(guildId: string, actorId: string, action: string, details: Prisma.InputJsonObject, userId?: string) {
+    await this.record(guildId, actorId, action, details, userId);
+    await this.deliver(guildId, action, `Actor: ${discordMention(actorId)}${userId ? `\nSubject: ${userRef(userId)}` : ''}\n${JSON.stringify(details)}`);
   }
   async deliver(guildId: string, title: string, description: string) {
     try {

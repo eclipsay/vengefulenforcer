@@ -17,8 +17,8 @@ describe('record visibility',()=> {
     const f=fixture();await expect(f.service.note(ctx,'remove',42)).rejects.toThrow('originating server');
     expect(f.db.userNote.findFirst).toHaveBeenCalledWith({where:{id:42,guildId:'own',deletedAt:null}});
   });
-  it('does not expose local cases belonging to other guilds',async()=> {
-    const f=fixture();await expect(f.service.getCase(ctx,42)).rejects.toThrow('another server');
-    expect(f.db.moderationCase.findFirst).toHaveBeenCalledWith({where:{id:42,OR:[{guildId:'own'},{scope:'GLOBAL'}]}});
+  it('scopes history to local and global actions without a case interface',async()=> {
+    const f=fixture();expect(f.service.scope(ctx)).toEqual({OR:[{guildId:'own'},{scope:'GLOBAL'}]});
+    expect('getCase' in f.service).toBe(false);
   });
 });

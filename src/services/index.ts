@@ -12,15 +12,15 @@ import { GuildService } from './guildService.js';
 import { RecordsService } from './recordsService.js';
 import { ChannelService } from './channelService.js';
 import { SerialQueue } from '../utils/core.js';
-export function createServices(db: Database, client: Client, logger: Logger, config: { CONTROL_GUILD_ID: string; BOT_OWNER_ID: string; CLIENT_ID: string }) {
-  const permissions = new PermissionService(db, config.CONTROL_GUILD_ID, config.BOT_OWNER_ID);
+export function createServices(db: Database, client: Client, logger: Logger, config: { GLOBAL_COMMAND_CHANNEL_ID?: string; CLIENT_ID: string }) {
+  const permissions = new PermissionService(db, config.GLOBAL_COMMAND_CHANNEL_ID);
   const audit = new AuditService(db, client, logger);
   const cases = new CaseService(db, client);
   const notifications = new NotificationService(db, client);
   const global = new GlobalBanService(db, client, permissions, cases, notifications, audit);
   return { db, client, permissions, audit, cases, notifications, global, queue: new SerialQueue(),
     moderation: new ModerationService(db, permissions, cases, notifications, audit),
-    sync: new BanSyncService(db, global, audit, config.CONTROL_GUILD_ID, config.CLIENT_ID),
+    sync: new BanSyncService(db, global, audit, config.CLIENT_ID),
     guild: new GuildService(db, client, permissions, audit),
     records: new RecordsService(db, cases, permissions, audit),
     channel: new ChannelService(db, permissions, audit) };

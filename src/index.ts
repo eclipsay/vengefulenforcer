@@ -36,12 +36,8 @@ try {
   await db.notification.updateMany({ where:{ status:'PENDING' },data:{ status:'UNKNOWN',error:'Process interrupted during DM delivery; not resent to avoid duplicates.' } });
   client.once(Events.ClientReady,()=>{ void (async()=> {
     if (client.user!.id !== env.CLIENT_ID) throw new Error('CLIENT_ID does not match the logged-in bot.');
-    if (!client.guilds.cache.has(env.CONTROL_GUILD_ID)) throw new Error('The bot must be invited to CONTROL_GUILD_ID.');
-    const registered=await db.enforcementGuild.findMany({ where:{ removedAt:null } });
-    for (const guild of registered) {
-      const connected=client.guilds.cache.get(guild.guildId);
-      await db.enforcementGuild.update({ where:{ guildId:guild.guildId },data:{ active:!!connected,...(connected ? {name:connected.name}:{enabled:false}) } });
-      await db.guildConfig.upsert({ where:{ guildId:guild.guildId },create:{guildId:guild.guildId},update:{} });
+    for (const guild of client.guilds.cache.values()) {
+      await db.guildConfig.upsert({ where:{ guildId:guild.id },create:{guildId:guild.id},update:{} });
     }
     await services.queue.run(()=>services.sync.run());
     events.start();

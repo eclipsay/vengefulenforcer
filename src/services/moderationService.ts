@@ -1,6 +1,6 @@
 import type { Database } from '../database/client.js';
 import type { Context } from '../types/context.js';
-import { caseNumber, errorText, retry, UserError } from '../utils/core.js';
+import { errorText, retry, UserError } from '../utils/core.js';
 import type { PermissionService, Permission } from './permissionService.js';
 import type { CaseService } from './caseService.js';
 import type { NotificationService } from './notificationService.js';
@@ -13,9 +13,9 @@ export class ModerationService {
     const permission: Record<string, Permission> = { BAN: 'ban', UNBAN: 'ban', KICK: 'kick', TIMEOUT: 'timeout', UNTIMEOUT: 'timeout', WARN: 'moderator' };
     await this.permissions.check(ctx, permission[action]);
     const existing = await this.db.moderationCase.findUnique({ where: { requestId: ctx.requestId } });
-    if (existing) return `${caseNumber(existing.id)} already recorded: ${existing.status}.`;
+    if (existing) return `This command was already processed: ${existing.status}.`;
     if (action === 'UNBAN') {
-      if (await this.db.globalBan.findFirst({ where: { userId, active: true } })) throw new UserError('This user has an active global ban. Use globalunban in the Control Server.');
+      if (await this.db.globalBan.findFirst({ where: { userId, active: true } })) throw new UserError('This user has an active global ban. Use globalunban in the configured global command channel.');
       const me = await ctx.guild.members.fetchMe();
       if (!me.permissions.has('BanMembers')) throw new UserError('The bot needs Ban Members.');
     } else await this.permissions.target(ctx.guild, ctx.member, userId, action);
@@ -27,7 +27,7 @@ export class ModerationService {
     // Warnings are already durable; bans are notified before removing shared-guild access.
     const dm = ['WARN','BAN'].includes(action) ? await this.notifications.send(record) : 'NOT_REQUESTED';
     if (action !== 'WARN') {
-      const auditReason = `${caseNumber(record.id)} | ${ctx.member.id} | ${reason}`.slice(0, 512);
+      const auditReason = `Vengeful Enforcer | ${ctx.member.id} | ${reason}`.slice(0, 512);
       try {
         if (action === 'BAN') await retry(() => ctx.guild.members.ban(userId, { reason: auditReason }));
         if (action === 'UNBAN') await retry(() => ctx.guild.members.unban(userId, auditReason));
@@ -38,12 +38,12 @@ export class ModerationService {
         }
       } catch (err) {
         await this.db.moderationCase.update({ where: { id: record.id }, data: { status: 'FAILED', error: errorText(err) } });
-        await this.audit.log(ctx.guild.id, ctx.member.id, `${action}_FAILED`, { case: caseNumber(record.id), error: errorText(err), dm }, userId);
-        return `${caseNumber(record.id)}: action failed: ${errorText(err)}. DM: ${dm}.`;
+        await this.audit.log(ctx.guild.id, ctx.member.id, `${action}_FAILED`, { recordId: record.id, error: errorText(err), dm }, userId);
+        return `Action failed: ${errorText(err)}. DM: ${dm}.`;
       }
       await this.db.moderationCase.update({ where: { id: record.id }, data: { status: 'SUCCESS' } });
     }
-    await this.audit.log(ctx.guild.id, ctx.member.id, action, { case: caseNumber(record.id), reason, dm }, userId);
-    return `${caseNumber(record.id)}: ${action} recorded for ${userId}. DM: ${dm}${dm === 'FAILED' ? ' (the user may have DMs disabled; the action is still recorded)' : ''}.`;
+    await this.audit.log(ctx.guild.id, ctx.member.id, action, { recordId: record.id, reason, dm }, userId);
+    return `${action} recorded for ${userId}. DM: ${dm}${dm === 'FAILED' ? ' (the user may have DMs disabled; the action is still recorded)' : ''}.`;
   }
 }
