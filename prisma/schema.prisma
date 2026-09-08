@@ -1,0 +1,165 @@
+generator client {
+  provider = "prisma-client-js"
+}
+datasource db {
+  provider = "postgresql"
+  url = env("DATABASE_URL")
+}
+model UserRecord {
+  id String @id
+  username String?
+  updatedAt DateTime @updatedAt
+  cases ModerationCase[]
+  notes UserNote[]
+}
+model ModerationCase {
+  id Int @id @default(autoincrement())
+  requestId String @unique
+  userId String
+  user UserRecord @relation(fields: [userId], references: [id])
+  username String?
+  moderatorId String
+  moderatorName String
+  guildId String
+  guildName String
+  action String
+  scope String @default("LOCAL")
+  reason String
+  duration Int?
+  expiresAt DateTime?
+  status String @default("PENDING")
+  error String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  comments CaseComment[]
+  evidence CaseEvidence[]
+  audits CaseAuditLog[]
+  notifications Notification[]
+  executions GlobalBanExecution[]
+  globalBans GlobalBan[]
+  @@index([userId, guildId, createdAt])
+  @@index([scope, status, action])
+}
+model Notification {
+  id Int @id @default(autoincrement())
+  caseId Int
+  case ModerationCase @relation(fields: [caseId], references: [id])
+  userId String
+  status String @default("PENDING")
+  error String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([caseId, userId])
+}
+model UserNote {
+  id Int @id @default(autoincrement())
+  userId String
+  user UserRecord @relation(fields: [userId], references: [id])
+  moderatorId String
+  moderatorName String
+  guildId String
+  content String
+  deletedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([userId, guildId])
+}
+model CaseComment {
+  id Int @id @default(autoincrement())
+  caseId Int
+  case ModerationCase @relation(fields: [caseId], references: [id])
+  authorId String
+  content String
+  createdAt DateTime @default(now())
+}
+model CaseEvidence {
+  id Int @id @default(autoincrement())
+  caseId Int
+  case ModerationCase @relation(fields: [caseId], references: [id])
+  authorId String
+  url String
+  createdAt DateTime @default(now())
+}
+model CaseAuditLog {
+  id Int @id @default(autoincrement())
+  caseId Int
+  case ModerationCase @relation(fields: [caseId], references: [id])
+  editorId String
+  action String
+  oldValue String?
+  newValue String
+  createdAt DateTime @default(now())
+}
+model GuildConfig {
+  guildId String @id
+  logChannelId String?
+  moderatorRoleId String?
+  adminRoleId String?
+  shareNotes Boolean @default(false)
+  globalBans Boolean @default(true)
+  autoEnforce Boolean @default(true)
+  updatedAt DateTime @updatedAt
+}
+model EnforcementGuild {
+  guildId String @id
+  name String
+  registeredBy String
+  registeredAt DateTime @default(now())
+  enabled Boolean @default(true)
+  active Boolean @default(true)
+  removedAt DateTime?
+}
+model GlobalModerator {
+  userId String @id
+  role String
+  grantedBy String
+  createdAt DateTime @default(now())
+}
+model GlobalBan {
+  userId String @id
+  caseId Int
+  case ModerationCase @relation(fields: [caseId], references: [id])
+  reason String
+  moderatorId String
+  active Boolean @default(true)
+  createdAt DateTime @default(now())
+  revokedAt DateTime?
+  @@index([active])
+}
+model GlobalBanExecution {
+  id Int @id @default(autoincrement())
+  caseId Int
+  case ModerationCase @relation(fields: [caseId], references: [id])
+  guildId String
+  action String
+  source String
+  status String @default("PENDING")
+  error String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([caseId, guildId])
+  @@index([status, action])
+}
+model ProtectedUser {
+  userId String @id
+  reason String
+  addedBy String
+  createdAt DateTime @default(now())
+}
+model ModeratorAction {
+  id Int @id @default(autoincrement())
+  guildId String
+  actorId String
+  userId String?
+  action String
+  details Json
+  createdAt DateTime @default(now())
+  @@index([userId, createdAt])
+}
+model ChannelLock {
+  channelId String @id
+  guildId String
+  previous String
+  active Boolean @default(true)
+  updatedAt DateTime @updatedAt
+}

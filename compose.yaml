@@ -1,0 +1,50 @@
+services:
+  db:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: vengeful
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: vengeful
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vengeful -d vengeful"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+  migrate:
+    build:
+      context: .
+      target: build
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://vengeful:${POSTGRES_PASSWORD}@db:5432/vengeful?schema=public
+    command: ["npm", "run", "prisma:migrate"]
+    depends_on:
+      db:
+        condition: service_healthy
+  register:
+    build:
+      context: .
+      target: build
+    env_file: .env
+    command: ["npm", "run", "register-commands"]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+  bot:
+    build:
+      context: .
+      target: runtime
+    restart: unless-stopped
+    init: true
+    stop_grace_period: 30s
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://vengeful:${POSTGRES_PASSWORD}@db:5432/vengeful?schema=public
+    depends_on:
+      register:
+        condition: service_completed_successfully
+volumes:
+  postgres_data:
