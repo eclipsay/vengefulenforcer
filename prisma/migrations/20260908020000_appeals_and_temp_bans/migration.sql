@@ -1,9 +1,9 @@
-ALTER TABLE "GuildConfig" ADD COLUMN "appealCategoryId" TEXT;
-ALTER TABLE "GuildConfig" ADD COLUMN "appealUrl" TEXT;
+ALTER TABLE "GuildConfig" ADD COLUMN IF NOT EXISTS "appealCategoryId" TEXT;
+ALTER TABLE "GuildConfig" ADD COLUMN IF NOT EXISTS "appealUrl" TEXT;
 
-ALTER TABLE "GlobalBan" ADD COLUMN "expiresAt" TIMESTAMP(3);
+ALTER TABLE "GlobalBan" ADD COLUMN IF NOT EXISTS "expiresAt" TIMESTAMP(3);
 
-CREATE TABLE "BanAppeal" (
+CREATE TABLE IF NOT EXISTS "BanAppeal" (
     "id" SERIAL NOT NULL,
     "caseId" INTEGER NOT NULL,
     "guildId" TEXT NOT NULL,
@@ -20,7 +20,7 @@ CREATE TABLE "BanAppeal" (
     CONSTRAINT "BanAppeal_pkey" PRIMARY KEY ("id")
 );
 
-CREATE TABLE "AppealRole" (
+CREATE TABLE IF NOT EXISTS "AppealRole" (
     "id" SERIAL NOT NULL,
     "guildId" TEXT NOT NULL,
     "roleId" TEXT NOT NULL,
@@ -30,14 +30,21 @@ CREATE TABLE "AppealRole" (
     CONSTRAINT "AppealRole_pkey" PRIMARY KEY ("id")
 );
 
-CREATE UNIQUE INDEX "BanAppeal_caseId_userId_key" ON "BanAppeal"("caseId", "userId");
+CREATE UNIQUE INDEX IF NOT EXISTS "BanAppeal_caseId_userId_key" ON "BanAppeal"("caseId", "userId");
 
-CREATE INDEX "BanAppeal_guildId_status_idx" ON "BanAppeal"("guildId", "status");
+CREATE INDEX IF NOT EXISTS "BanAppeal_guildId_status_idx" ON "BanAppeal"("guildId", "status");
 
-CREATE UNIQUE INDEX "AppealRole_guildId_roleId_key" ON "AppealRole"("guildId", "roleId");
+CREATE UNIQUE INDEX IF NOT EXISTS "AppealRole_guildId_roleId_key" ON "AppealRole"("guildId", "roleId");
 
-CREATE INDEX "AppealRole_guildId_idx" ON "AppealRole"("guildId");
+CREATE INDEX IF NOT EXISTS "AppealRole_guildId_idx" ON "AppealRole"("guildId");
 
-CREATE INDEX "GlobalBan_expiresAt_idx" ON "GlobalBan"("expiresAt");
+CREATE INDEX IF NOT EXISTS "GlobalBan_expiresAt_idx" ON "GlobalBan"("expiresAt");
 
-ALTER TABLE "BanAppeal" ADD CONSTRAINT "BanAppeal_caseId_fkey" FOREIGN KEY ("caseId") REFERENCES "ModerationCase"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'BanAppeal_caseId_fkey'
+  ) THEN
+    ALTER TABLE "BanAppeal" ADD CONSTRAINT "BanAppeal_caseId_fkey" FOREIGN KEY ("caseId") REFERENCES "ModerationCase"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+  END IF;
+END $$;
