@@ -13,6 +13,7 @@ describe('warning and ban DMs',()=> {
     const f=notificationFixture(); expect(await f.service.send(record as any)).toBe('SENT');
     const payload=f.send.mock.calls[0][0];
     expect(payload.embeds[0].toJSON().description).toContain('Repeated spam');
+    expect(payload.embeds[0].toJSON().description).toContain('<t:1788868800:F>');
     expect(payload.embeds[0].toJSON().description).not.toContain('VE-000042');
     expect(payload.embeds[0].toJSON().description).not.toContain('Case:');
     expect(payload.embeds[0].toJSON().description).toContain('Test Guild');
@@ -27,9 +28,19 @@ describe('warning and ban DMs',()=> {
     const f=notificationFixture();f.db.notification.findUnique.mockResolvedValue({status:'UNKNOWN'});
     expect(await f.service.send(record as any)).toBe('UNKNOWN');expect(f.send).not.toHaveBeenCalled();
   });
-  it('does not falsely assert completed enforcement in pre-ban notices',async()=> {
+  it('uses simple human wording in ban notices',async()=> {
     const f=notificationFixture();await f.service.send({...record,action:'GLOBAL_BAN',scope:'GLOBAL'} as any);
-    expect(f.send.mock.calls[0][0].embeds[0].toJSON().description).toContain('Enforcement is about to be attempted');
+    const text=f.send.mock.calls[0][0].embeds[0].toJSON().description;
+    expect(text).toContain('You have been banned from Vengeful Realms.');
+    expect(text).toContain('If you believe this was a mistake');
+    expect(text).not.toContain('Enforcement is about to be attempted');
+    expect(text).not.toContain('issued against your account');
+  });
+  it('shows global temp ban expiration as a Discord timestamp',async()=> {
+    const f=notificationFixture();await f.service.send({...record,action:'GLOBAL_TEMP_BAN',scope:'GLOBAL',expiresAt:new Date('2026-09-15T12:00:00Z')} as any);
+    const text=f.send.mock.calls[0][0].embeds[0].toJSON().description;
+    expect(text).toContain('Expires: <t:1789473600:F>');
+    expect(text).not.toContain('2026-09-15T12:00:00.000Z');
   });
   it('adds an appeal button to ban notices',async()=> {
     const f=notificationFixture();await f.service.send({...record,action:'BAN',scope:'LOCAL'} as any);

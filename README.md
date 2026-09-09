@@ -159,7 +159,7 @@ Global bans, global temp bans and global unbans require Discord Ban Members and 
 
 Discord hierarchy still applies: staff cannot punish equal/higher roles in their server, and the bot cannot punish server owners, itself, or members above its role. Each destination is attempted separately, so one failed server does not stop the rest.
 
-Bans are notified before removal while a shared server may still allow DM delivery. Notices state that enforcement is about to be attempted, since the API can fail. Notices include the reason and date without case numbers. No private notes or evidence are included in DMs. Ban notices include an appeal button. Because banned users cannot see channels inside a server they are banned from, the appeal channel is created for staff review in the configured appeal category.
+Bans are notified before removal while a shared server may still allow DM delivery. Notices use Discord's native timestamp format, so dates render cleanly for each user. They include the reason and date without case numbers, private notes or evidence. Ban notices include an appeal button. Because banned users cannot see channels inside a server they are banned from, the appeal channel is created for staff review in the configured appeal category.
 
 Global bans remain in PostgreSQL. On startup and every 15 minutes by default, missing bans are restored, unfinished global unbans are retried, and expired global temp bans are revoked. Newly joined servers automatically receive existing global bans. Globally banned members are re-banned on join. Manual Discord unbans are reversed while the global ban is active; use globalunban to revoke it everywhere. Set SYNC_INTERVAL_MINUTES to change the background interval.
 
