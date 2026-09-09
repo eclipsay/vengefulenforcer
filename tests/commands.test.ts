@@ -9,7 +9,7 @@ function fixture(channelId='commands',bits:bigint[]=[P.BanMembers]) {
   const member={id:'staff',permissions:new PermissionsBitField(bits)};
   const ctx:any={channelId,member,guild:{id:'any-server',members:{fetch:vi.fn().mockResolvedValue(member)}},reply:vi.fn().mockResolvedValue({})};
   const db:any={guildConfig:{findUnique:vi.fn().mockResolvedValue({globalCommandChannelId:'commands'})}};
-  const global={globalBan:vi.fn().mockResolvedValue('Banned'),globalUnban:vi.fn().mockResolvedValue('Unbanned')};
+  const global={globalBan:vi.fn().mockResolvedValue('Banned'),globalTempBan:vi.fn().mockResolvedValue('Temp banned'),globalUnban:vi.fn().mockResolvedValue('Unbanned')};
   const services:any={db,permissions:new PermissionService(db),global};
   return {ctx,global,execute:createRegistry(services,'-')};
 }
@@ -27,14 +27,18 @@ describe('simple global commands',()=> {
     await f.execute(f.ctx,invocation);
     expect(f.global.globalUnban).toHaveBeenCalledWith(f.ctx,args.user,args.reason);
   });
+  it('routes global temp bans with duration into the same service',async()=> {
+    const f=fixture();await f.execute(f.ctx,parsePrefix('-globaltempban 123456789012345678 7d Ban evasion','-')!);
+    expect(f.global.globalTempBan).toHaveBeenCalledWith(f.ctx,'123456789012345678',604800,'Ban evasion',undefined);
+  });
   it('blocks both global actions in the wrong channel before side effects',async()=> {
     const f=fixture('wrong');
-    for (const name of ['globalban','globalunban']) await expect(f.execute(f.ctx,parsePrefix('-'+name+' 123456789012345678 Reason','-')!)).rejects.toThrow('Use global commands');
+    for (const command of ['globalban 123456789012345678 Reason','globaltempban 123456789012345678 1h Reason','globalunban 123456789012345678 Reason']) await expect(f.execute(f.ctx,parsePrefix('-'+command,'-')!)).rejects.toThrow('Use global commands');
     expect(f.global.globalBan).not.toHaveBeenCalled();expect(f.global.globalUnban).not.toHaveBeenCalled();
   });
   it('blocks both global actions without Ban Members',async()=> {
     const f=fixture('commands',[]);
-    for (const name of ['globalban','globalunban']) await expect(f.execute(f.ctx,parsePrefix('-'+name+' 123456789012345678 Reason','-')!)).rejects.toThrow('Ban Members');
+    for (const command of ['globalban 123456789012345678 Reason','globaltempban 123456789012345678 1h Reason','globalunban 123456789012345678 Reason']) await expect(f.execute(f.ctx,parsePrefix('-'+command,'-')!)).rejects.toThrow('Ban Members');
     expect(f.global.globalBan).not.toHaveBeenCalled();expect(f.global.globalUnban).not.toHaveBeenCalled();
   });
 });

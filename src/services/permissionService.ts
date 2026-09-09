@@ -40,7 +40,7 @@ export class PermissionService {
     try { target = await guild.members.fetch({ user: userId, force: true }); }
     catch (e) {
       if ((e as {code?: number}).code === 10007) {
-        if (['BAN','GLOBAL_BAN','WARN'].includes(action)) return;
+        if (['BAN','GLOBAL_BAN','GLOBAL_TEMP_BAN','WARN'].includes(action)) return;
         throw new UserError('That user ID is not a current member of this server. Kicks and timeouts require the user to be in the server.');
       }
       throw e;

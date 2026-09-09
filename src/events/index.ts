@@ -36,7 +36,22 @@ export function attachEvents(client: Client, s: Services, logger: Logger, prefix
   });
   client.on(Events.InteractionCreate,interaction=> {
     // Message component collectors own pagination interactions.
-    if (!interaction.isChatInputCommand()) return;
+    if (!interaction.isChatInputCommand()) {
+      if (!interaction.isButton() && !interaction.isModalSubmit()) return;
+      if (!interaction.customId.startsWith('appeal:')) return;
+      safe(async()=> {
+        try {
+          if (interaction.isButton()) await s.appeals.openModal(interaction);
+          else await s.appeals.submit(interaction);
+        } catch (err) {
+          if (!(err instanceof UserError)) logger.error({err},'Appeal interaction failed');
+          const payload={ embeds:[embed('ERROR',err instanceof UserError ? err.message : 'The appeal could not be opened. Ask staff to check the appeal category.')],components:[] };
+          if (interaction.deferred || interaction.replied) await interaction.editReply(payload);
+          else await interaction.reply({ ...payload,flags:64 });
+        }
+      });
+      return;
+    }
     safe(async()=> {
       try {
         await interaction.deferReply({ flags:64 });

@@ -15,8 +15,9 @@ function fixture() {
   const client:any={user:{id:'bot'},guilds:{cache:new Map(['one','two','guild'].map(id=>[id,{id,name:id}])),fetch:vi.fn().mockResolvedValue({bans:{fetch:vi.fn().mockRejectedValue({code:10026})},members:{ban,unban:vi.fn()}})}};
   const permissions:any={target:vi.fn()};const cases:any={create:vi.fn()};const notifications:any={send:vi.fn()};
   const audit:any={deliver:vi.fn(),log:vi.fn()};
-  const service=new GlobalBanService(db,client,permissions,cases,notifications,audit);
-  return {record,db,client,permissions,cases,notifications,audit,service,ban};
+  const cleanup:any={safeDeleteUserMessages:vi.fn().mockResolvedValue({deleted:3,failed:0,channels:1,summary:'3 deleted'})};
+  const service=new GlobalBanService(db,client,permissions,cases,notifications,audit,cleanup);
+  return {record,db,client,permissions,cases,notifications,audit,cleanup,service,ban};
 }
 describe('global enforcement recovery',()=> {
   it('attempts later guilds when one Discord guild fails',async()=> {
@@ -45,19 +46,39 @@ describe('global enforcement recovery',()=> {
     const f=fixture();await f.service.execute(f.record as any,'guild','BAN','SYNC');
     expect(f.notifications.send).not.toHaveBeenCalled();expect(f.cases.create).not.toHaveBeenCalled();
   });
+  it('uses the valid ban prune cap and runs the 30-day cleanup pass',async()=> {
+    const f=fixture();await f.service.execute(f.record as any,'guild','BAN','SYNC');
+    expect(f.ban).toHaveBeenCalledWith('target',expect.objectContaining({deleteMessageSeconds:604800}));
+    expect(f.cleanup.safeDeleteUserMessages).toHaveBeenCalled();
+  });
   it('reapplies global bans regardless of legacy auto-enforcement settings',async()=> {
     const f=fixture();f.db.guildConfig.findUnique.mockResolvedValue({globalBans:true,autoEnforce:false});
     await f.service.onSubject('guild','target','MANUAL_UNBAN','actor');
     expect(f.audit.log).toHaveBeenCalled();expect(f.ban).toHaveBeenCalled();
   });
   it('recovers pending revocations and loads bans from the database',async()=> {
-    const db:any={moderationCase:{findMany:vi.fn().mockResolvedValue([{id:100,action:'GLOBAL_UNBAN'}])},globalBan:{findMany:vi.fn().mockResolvedValueOnce([{userId:'target',case:{id:42}}]).mockResolvedValueOnce([])}};
+    const db:any={moderationCase:{findMany:vi.fn().mockResolvedValue([{id:100,action:'GLOBAL_UNBAN'}])},globalBan:{findMany:vi.fn().mockResolvedValueOnce([]).mockResolvedValueOnce([{userId:'target',case:{id:42}}]).mockResolvedValueOnce([])}};
     const global:any={processPending:vi.fn(),guilds:vi.fn().mockResolvedValue([{guildId:'guild'}]),execute:vi.fn().mockResolvedValue('ALREADY_ENFORCED')};
     const audit:any={log:vi.fn(),record:vi.fn()};const service=new BanSyncService(db,global,audit,'bot');
     expect(await service.run()).toEqual({records:1,guilds:1,checks:1,already:1,reapplied:0,failed:0,skipped:0});
     expect(global.processPending).toHaveBeenCalledWith({id:100,action:'GLOBAL_UNBAN'});
     expect(audit.record).toHaveBeenCalledWith('guild','bot','Global bans synchronized',expect.objectContaining({records:1}));
     expect(audit.log).not.toHaveBeenCalled();
+  });
+  it('expires global temp bans into persisted unban work',async()=> {
+    const expired={userId:'target',caseId:42,case:{id:42,action:'GLOBAL_TEMP_BAN'}};
+    const db:any={
+      $transaction:vi.fn(async fn=>fn(db)),
+      globalBan:{findMany:vi.fn().mockResolvedValueOnce([expired]).mockResolvedValueOnce([]),update:vi.fn()},
+      moderationCase:{update:vi.fn(),findMany:vi.fn().mockResolvedValue([])},
+      globalBanExecution:{createMany:vi.fn()},
+    };
+    const global:any={guilds:vi.fn().mockResolvedValue([{guildId:'guild'}]),processPending:vi.fn(),execute:vi.fn()};
+    const audit:any={record:vi.fn()};const service=new BanSyncService(db,global,audit,'bot');
+    await service.run();
+    expect(db.globalBan.update).toHaveBeenCalledWith(expect.objectContaining({data:expect.objectContaining({active:false})}));
+    expect(db.globalBanExecution.createMany).toHaveBeenCalledWith(expect.objectContaining({data:[expect.objectContaining({action:'UNBAN',source:'EXPIRED'})]}));
+    expect(global.processPending).toHaveBeenCalledWith(expired.case);
   });
   it('stores silent audit reports without sending Discord messages',async()=> {
     const db:any={moderatorAction:{create:vi.fn().mockResolvedValue({})}};

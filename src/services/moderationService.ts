@@ -5,10 +5,11 @@ import type { PermissionService, Permission } from './permissionService.js';
 import type { CaseService } from './caseService.js';
 import type { NotificationService } from './notificationService.js';
 import type { AuditService } from './auditService.js';
+import { BAN_DELETE_SECONDS, type MessageCleanupService } from './messageCleanupService.js';
 
 export class ModerationService {
   constructor(private db: Database, private permissions: PermissionService, private cases: CaseService,
-    private notifications: NotificationService, private audit: AuditService) {}
+    private notifications: NotificationService, private audit: AuditService, private cleanup: MessageCleanupService) {}
   async punish(ctx: Context, action: string, userId: string, reason: string, seconds?: number) {
     const permission: Record<string, Permission> = { BAN: 'ban', UNBAN: 'ban', KICK: 'kick', TIMEOUT: 'timeout', UNTIMEOUT: 'timeout', WARN: 'moderator' };
     await this.permissions.check(ctx, permission[action]);
@@ -29,7 +30,7 @@ export class ModerationService {
     if (action !== 'WARN') {
       const auditReason = `Vengeful Enforcer | ${ctx.member.id} | ${reason}`.slice(0, 512);
       try {
-        if (action === 'BAN') await retry(() => ctx.guild.members.ban(userId, { reason: auditReason }));
+        if (action === 'BAN') await retry(() => ctx.guild.members.ban(userId, { reason: auditReason, deleteMessageSeconds: BAN_DELETE_SECONDS }));
         if (action === 'UNBAN') await retry(() => ctx.guild.members.unban(userId, auditReason));
         if (action === 'KICK') await ctx.guild.members.kick(userId, auditReason);
         if (action === 'TIMEOUT' || action === 'UNTIMEOUT') {
@@ -43,7 +44,8 @@ export class ModerationService {
       }
       await this.db.moderationCase.update({ where: { id: record.id }, data: { status: 'SUCCESS' } });
     }
-    await this.audit.log(ctx.guild.id, ctx.member.id, action, { recordId: record.id, reason, dm }, userId);
-    return `${action} recorded for ${userId}. DM: ${dm}${dm === 'FAILED' ? ' (the user may have DMs disabled; the action is still recorded)' : ''}.`;
+    const cleanup = action === 'BAN' ? await this.cleanup.safeDeleteUserMessages(ctx.guild, userId) : undefined;
+    await this.audit.log(ctx.guild.id, ctx.member.id, action, { recordId: record.id, reason, dm, cleanup }, userId);
+    return `${action} recorded for ${userId}. DM: ${dm}${cleanup ? `. Messages cleaned from last 30 days: ${cleanup.summary}` : ''}${dm === 'FAILED' ? ' (the user may have DMs disabled; the action is still recorded)' : ''}.`;
   }
 }

@@ -7,6 +7,8 @@ Simple Discord moderation with persistent bans, warnings and notes.
 - Global commands execute immediately, without a confirmation menu.
 - Prefix and slash commands use the same services.
 - Warnings and bans attempt a DM. Closed DMs do not stop moderation.
+- Ban DMs include an appeal button when an appeal category is configured.
+- Local and global bans use Discord's valid 7-day ban prune and then scan channels to delete that user's messages from the last 30 days.
 - Notes, warnings and bans survive restarts.
 - No Control Server, server registration, global staff roles or case commands.
 
@@ -90,6 +92,18 @@ Optional server logs:
 -config logchannel #moderation-logs
 ~~~
 
+Appeal tickets:
+
+~~~text
+-config appealcategory 123456789012345678
+-config appealrole add @Appeal Staff
+-config appealrole add @High Command
+-config appealrole remove @Old Appeals
+-config appealrole list
+~~~
+
+Use the appeal category ID, not a normal text channel. Appeal roles control who can see new appeal channels, and you can add more than one role. When a banned user clicks the DM appeal button, Vengeful Enforcer opens a staff-side appeal channel in that category with this format: name, Discord ID, reason for ban, and why they believe they should be unbanned.
+
 Use -config to see the configured channels. Use none instead of a channel to clear a per-server setting.
 
 ## Commands
@@ -101,6 +115,7 @@ Bans, global bans/unbans, warnings, notes and history support absent users by ID
 | Prefix command | Action |
 | --- | --- |
 | -globalban USER REASON | Ban across every joined server |
+| -globaltempban USER TIME REASON | Temporarily ban across every joined server |
 | -globalunban USER REASON | Revoke the global ban and unban across every joined server |
 | -note add USER TEXT | Save a permanent staff note |
 | -note list USER | Read notes |
@@ -118,30 +133,35 @@ Bans, global bans/unbans, warnings, notes and history support absent users by ID
 | -slowmode 10 | Slowmode seconds; 0 disables |
 | -lock / -unlock | Change and restore @everyone Send Messages |
 | -config | Show configured channels |
+| -config appealcategory CATEGORY_ID | Set the category where appeal channels are created |
+| -config appealrole add @Role | Let a role see appeal channels |
+| -config appealrole remove @Role | Remove a role from appeal channels |
+| -config appealrole list | Show appeal roles |
 | -help | Show the command reference |
 
 Examples:
 
 ~~~text
 -globalban 123456789012345678 Repeated harassment
+-globaltempban 123456789012345678 7d Ban evasion
 -globalunban 123456789012345678 Appeal accepted
 -note add 123456789012345678 Watch for repeated spam
 -warn @TestUser Please stop spamming
 ~~~
 
-Slash examples: /globalban user:ID reason:Reason, /globalunban user:ID reason:Reason, /note add user:ID text:Text.
+Slash examples: /globalban user:ID reason:Reason, /globaltempban user:ID duration:7d reason:Reason, /globalunban user:ID reason:Reason, /note add user:ID text:Text.
 
-Aliases: gban / gb, gunban, hist / record. Globalban also accepts optional --evidence URL at the end of the prefix command, or the evidence slash option.
+Aliases: gban / gb, gtban / gtb, gunban, hist / record. Globalban and globaltempban also accept optional --evidence URL at the end of the prefix command, or the evidence slash option.
 
 ## Permissions and behavior
 
-Global bans require Discord Ban Members and the configured command channel. No old owner/staff grants or configured custom roles bypass this requirement. Local moderation uses the corresponding native Discord permission. Notes, warnings and history require Moderate Members or Ban Members. Channel configuration requires Discord Administrator.
+Global bans, global temp bans and global unbans require Discord Ban Members and the configured command channel. That channel lock only applies to those three global commands. Local moderation, notes, warnings, history and config commands can be used anywhere the user's Discord permissions allow. No old owner/staff grants or configured custom roles bypass this requirement. Local moderation uses the corresponding native Discord permission. Notes, warnings and history require Moderate Members or Ban Members. Channel configuration requires Discord Administrator.
 
 Discord hierarchy still applies: staff cannot punish equal/higher roles in their server, and the bot cannot punish server owners, itself, or members above its role. Each destination is attempted separately, so one failed server does not stop the rest.
 
-Bans are notified before removal while a shared server may still allow DM delivery. Notices state that enforcement is about to be attempted, since the API can fail. Notices include the reason and date without case numbers. No private notes or evidence are included in DMs.
+Bans are notified before removal while a shared server may still allow DM delivery. Notices state that enforcement is about to be attempted, since the API can fail. Notices include the reason and date without case numbers. No private notes or evidence are included in DMs. Ban notices include an appeal button. Because banned users cannot see channels inside a server they are banned from, the appeal channel is created for staff review in the configured appeal category.
 
-Global bans remain in PostgreSQL. On startup and every 15 minutes by default, missing bans are restored and unfinished global unbans are retried. Newly joined servers automatically receive existing global bans. Globally banned members are re-banned on join. Manual Discord unbans are reversed while the global ban is active; use globalunban to revoke it everywhere. Set SYNC_INTERVAL_MINUTES to change the background interval.
+Global bans remain in PostgreSQL. On startup and every 15 minutes by default, missing bans are restored, unfinished global unbans are retried, and expired global temp bans are revoked. Newly joined servers automatically receive existing global bans. Globally banned members are re-banned on join. Manual Discord unbans are reversed while the global ban is active; use globalunban to revoke it everywhere. Set SYNC_INTERVAL_MINUTES to change the background interval.
 
 Removing the bot from a server stops future enforcement there but does not remove its existing Discord bans. Global unban affects servers the bot is currently in.
 

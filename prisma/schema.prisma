@@ -37,6 +37,7 @@ model ModerationCase {
   notifications Notification[]
   executions GlobalBanExecution[]
   globalBans GlobalBan[]
+  appeals BanAppeal[]
   @@index([userId, guildId, createdAt])
   @@index([scope, status, action])
 }
@@ -93,6 +94,7 @@ model CaseAuditLog {
 model GuildConfig {
   guildId String @id
   globalCommandChannelId String?
+  appealCategoryId String?
   logChannelId String?
   moderatorRoleId String?
   adminRoleId String?
@@ -100,6 +102,16 @@ model GuildConfig {
   globalBans Boolean @default(true)
   autoEnforce Boolean @default(true)
   updatedAt DateTime @updatedAt
+}
+
+model AppealRole {
+  id Int @id @default(autoincrement())
+  guildId String
+  roleId String
+  addedBy String
+  createdAt DateTime @default(now())
+  @@unique([guildId, roleId])
+  @@index([guildId])
 }
 model EnforcementGuild {
   guildId String @id
@@ -123,9 +135,29 @@ model GlobalBan {
   reason String
   moderatorId String
   active Boolean @default(true)
+  expiresAt DateTime?
   createdAt DateTime @default(now())
   revokedAt DateTime?
   @@index([active])
+  @@index([expiresAt])
+}
+
+model BanAppeal {
+  id Int @id @default(autoincrement())
+  caseId Int
+  case ModerationCase @relation(fields: [caseId], references: [id])
+  guildId String
+  userId String
+  channelId String?
+  name String
+  discordId String
+  banReason String
+  unbanReason String
+  status String @default("OPEN")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([caseId, userId])
+  @@index([guildId, status])
 }
 model GlobalBanExecution {
   id Int @id @default(autoincrement())

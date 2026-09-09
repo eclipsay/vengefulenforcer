@@ -1,5 +1,5 @@
 import { describe,it,expect } from 'vitest';
-import { caseNumber,duration,id,integer,SerialQueue,evidenceUrl,discordMention } from '../src/utils/core.js';
+import { caseNumber,duration,globalBanDuration,id,integer,SerialQueue,evidenceUrl,discordMention } from '../src/utils/core.js';
 import { parsePrefix } from '../src/commands/prefix/parser.js';
 import { parseSlash } from '../src/commands/slash/parser.js';
 import { definitions,slashDefinitions } from '../src/commands/definitions.js';
@@ -12,6 +12,7 @@ describe('input and routing',()=> {
   it('bounds durations and channel counts',()=> {
     expect(duration('28d')).toBe(2419200); expect(duration('1h')).toBe(3600);
     for (const v of ['29d','0m','-1h','1.5h']) expect(()=>duration(v)).toThrow();
+    expect(globalBanDuration('30d')).toBe(2592000); expect(()=>globalBanDuration('366d')).toThrow();
     expect(()=>integer('101',1,100)).toThrow(); expect(()=>integer('1x',1,100)).toThrow();
     expect(()=>evidenceUrl('javascript:alert(1)')).toThrow();
   });
@@ -23,6 +24,7 @@ describe('input and routing',()=> {
     const result=parsePrefix('-gb 123456789012345678 Ban evasion --evidence https://example.com/proof','-')!;
     expect(result.definition.name).toBe('globalban');
     expect(result.args).toEqual({user:'123456789012345678',reason:'Ban evasion',evidence:'https://example.com/proof'});
+    expect(parsePrefix('-globaltempban 123456789012345678 7d Ban evasion','-')?.args).toEqual({user:'123456789012345678',duration:'7d',reason:'Ban evasion'});
     expect(parsePrefix('-case VE-000003','-')).toBeNull();
     expect(parsePrefix('-config','-')?.sub).toBe('view');
     expect(parsePrefix('-enforcement list','-')).toBeNull();

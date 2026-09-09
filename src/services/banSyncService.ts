@@ -4,10 +4,19 @@ import type { AuditService } from './auditService.js';
 export class BanSyncService {
   constructor(private db: Database, private global: GlobalBanService, private audit: AuditService, private botId: string) {}
   async run(actorId = this.botId) {
+    const guilds = await this.global.guilds();
+    const expired = await this.db.globalBan.findMany({ where: { active: true, expiresAt: { lte: new Date() } }, include: { case: true }, take: 100 });
+    for (const ban of expired) {
+      await this.db.$transaction(async tx => {
+        await tx.globalBan.update({ where: { userId: ban.userId }, data: { active: false, revokedAt: new Date() } });
+        await tx.moderationCase.update({ where: { id: ban.caseId }, data: { status: 'PARTIAL' } });
+        await tx.globalBanExecution.createMany({ data: guilds.map(g => ({ caseId: ban.caseId, guildId: g.guildId, action: 'UNBAN', source: 'EXPIRED' })) });
+      });
+      await this.global.processPending(ban.case);
+    }
     // Unban work was saved atomically with revocation; replay it even after a crash.
     const unfinished = await this.db.moderationCase.findMany({ where: { scope: 'GLOBAL', status: { in: ['PENDING','PARTIAL'] } } });
     for (const record of unfinished) await this.global.processPending(record);
-    const guilds = await this.global.guilds();
     const report = { records: 0, guilds: guilds.length, checks: 0, already: 0, reapplied: 0, failed: 0, skipped: 0 };
     let cursor: string | undefined;
     for (;;) {

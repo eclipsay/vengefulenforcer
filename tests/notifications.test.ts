@@ -31,6 +31,11 @@ describe('warning and ban DMs',()=> {
     const f=notificationFixture();await f.service.send({...record,action:'GLOBAL_BAN',scope:'GLOBAL'} as any);
     expect(f.send.mock.calls[0][0].embeds[0].toJSON().description).toContain('Enforcement is about to be attempted');
   });
+  it('adds an appeal button to ban notices',async()=> {
+    const f=notificationFixture();await f.service.send({...record,action:'BAN',scope:'LOCAL'} as any);
+    const payload=f.send.mock.calls[0][0];
+    expect(payload.components[0].components[0].data.custom_id).toBe('appeal:start:42');
+  });
 });
 function moderationFixture(action:string,dm='SENT') {
   const order:string[]=[];
@@ -41,9 +46,10 @@ function moderationFixture(action:string,dm='SENT') {
   const cases={data:vi.fn().mockResolvedValue({}),create:vi.fn().mockResolvedValue(c)};
   const notifications={send:vi.fn(async()=>{order.push('dm');return dm;})};
   const audit={log:vi.fn()};
+  const cleanup={safeDeleteUserMessages:vi.fn(async()=>({deleted:2,failed:0,channels:1,summary:'2 deleted'}))};
   const ban=vi.fn(async()=>{order.push('ban');});
   const ctx:any={requestId:'request',guild:{id:'guild',members:{ban}},member:{id:'moderator'}};
-  return {order,db,permissions,cases,notifications,audit,ban,ctx,service:new ModerationService(db,permissions as any,cases as any,notifications as any,audit as any)};
+  return {order,db,permissions,cases,notifications,audit,cleanup,ban,ctx,service:new ModerationService(db,permissions as any,cases as any,notifications as any,audit as any,cleanup as any)};
 }
 describe('moderation service durability',()=> {
   it('commits a successful warning before DM delivery',async()=> {
@@ -53,6 +59,8 @@ describe('moderation service durability',()=> {
   it('still bans with a blocked DM and sends before the ban',async()=> {
     const f=moderationFixture('BAN','FAILED');const result=await f.service.punish(f.ctx,'BAN',record.userId,'Repeated spam');
     expect(f.order).toEqual(['commit','dm','ban','status:SUCCESS']);expect(result).toContain('DM: FAILED');
+    expect(f.ban).toHaveBeenCalledWith(record.userId,expect.objectContaining({deleteMessageSeconds:604800}));
+    expect(f.cleanup.safeDeleteUserMessages).toHaveBeenCalledWith(f.ctx.guild,record.userId);
   });
   it('records Discord failure without reporting successful punishment',async()=> {
     const f=moderationFixture('BAN');f.ban.mockRejectedValue(new Error('Missing permissions'));

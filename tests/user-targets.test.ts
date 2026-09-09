@@ -17,6 +17,7 @@ describe('Discord user ID support',()=> {
   const routes=[
     ...['ban','unban','kick','timeout','untimeout','warn'].map(name=>({name,sub:undefined,service:'moderation',method:'punish',targetIndex:2,extra:name==='timeout'?{duration:'1h',reason:'Reason'}:{reason:'Reason'}})),
     ...['globalban','globalunban'].map(name=>({name,sub:undefined,service:'global',method:name==='globalban'?'globalBan':'globalUnban',targetIndex:1,extra:{reason:'Reason'}})),
+    {name:'globaltempban',sub:undefined,service:'global',method:'globalTempBan',targetIndex:1,extra:{duration:'1h',reason:'Reason'}},
     ...['notes','warnings','history'].map(name=>({name,sub:undefined,service:'records',method:'notes',targetIndex:1,extra:{}})),
     {name:'note',sub:'add',service:'records',method:'note',targetIndex:2,extra:{text:'Note text'}},
   ];

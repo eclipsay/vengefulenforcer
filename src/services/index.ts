@@ -8,6 +8,8 @@ import { NotificationService } from './notificationService.js';
 import { ModerationService } from './moderationService.js';
 import { GlobalBanService } from './globalBanService.js';
 import { BanSyncService } from './banSyncService.js';
+import { AppealService } from './appealService.js';
+import { MessageCleanupService } from './messageCleanupService.js';
 import { GuildService } from './guildService.js';
 import { RecordsService } from './recordsService.js';
 import { ChannelService } from './channelService.js';
@@ -17,9 +19,11 @@ export function createServices(db: Database, client: Client, logger: Logger, con
   const audit = new AuditService(db, client, logger);
   const cases = new CaseService(db, client);
   const notifications = new NotificationService(db, client);
-  const global = new GlobalBanService(db, client, permissions, cases, notifications, audit);
+  const cleanup = new MessageCleanupService();
+  const global = new GlobalBanService(db, client, permissions, cases, notifications, audit, cleanup);
   return { db, client, permissions, audit, cases, notifications, global, queue: new SerialQueue(),
-    moderation: new ModerationService(db, permissions, cases, notifications, audit),
+    appeals: new AppealService(db, audit),
+    moderation: new ModerationService(db, permissions, cases, notifications, audit, cleanup),
     sync: new BanSyncService(db, global, audit, config.CLIENT_ID),
     guild: new GuildService(db, client, permissions, audit),
     records: new RecordsService(db, cases, permissions, audit),

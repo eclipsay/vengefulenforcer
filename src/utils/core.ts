@@ -39,6 +39,13 @@ export function duration(value: string | undefined): number {
   if (n < 1 || n > 2419200) throw new UserError('Timeout must be between 1 second and 28 days.');
   return n;
 }
+export function globalBanDuration(value: string | undefined): number {
+  const m = value?.match(/^(\d+)(s|m|h|d|w|mo|y)$/i);
+  if (!m) throw new UserError('Use a duration such as 1h, 7d, 30d, 1mo or 1y.');
+  const n = Number(m[1]) * ({ s: 1, m: 60, h: 3600, d: 86400, w: 604800, mo: 2592000, y: 31536000 }[m[2].toLowerCase()]!);
+  if (!Number.isSafeInteger(n) || n < 60 || n > 31536000) throw new UserError('Global temp bans must be between 1 minute and 1 year.');
+  return n;
+}
 export const caseNumber = (n: number) => `VE-${String(n).padStart(6, '0')}`;
 export const caseId = (value: string | undefined) => integer(value?.replace(/^VE-/i, ''), 1, 2147483647);
 export const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e)).slice(0, 1800);

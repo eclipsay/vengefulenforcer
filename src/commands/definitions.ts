@@ -16,6 +16,7 @@ export const definitions: Definition[] = [
   ...['clear','slowmode','lock','unlock'].map(name => ({ name, description: `${name} in the current channel`, category:'Moderation', permission: (name === 'clear' ? 'messages':'channel') as Permission,
     options: ['clear','slowmode'].includes(name) ? [option('amount',name === 'clear' ? 'Messages to remove (1–100)' : 'Slowmode seconds (0–21600)')] : [] })),
   { name:'globalban', aliases:['gban','gb'], description:'Ban across every server the bot is in', category:'Global Enforcement', permission:'global', options:[user,reason,option('evidence','Optional evidence URL',false,false)] },
+  { name:'globaltempban', aliases:['gtban','gtb'], description:'Temporarily ban across every server the bot is in', category:'Global Enforcement', permission:'global', options:[user,option('duration','Duration such as 1h, 7d or 30d'),reason,option('evidence','Optional evidence URL',false,false)] },
   { name:'globalunban', aliases:['gunban'], description:'Revoke an active global ban', category:'Global Enforcement', permission:'global', options:[user,reason] },
   { name:'notes', aliases:['warnings','history','hist','record'], description:'User notes and moderation record', category:'Notes', permission:'moderator', options:[user] },
   { name:'note', description:'Permanent staff notes', category:'Notes', permission:'moderator', subcommands:[
@@ -25,7 +26,8 @@ export const definitions: Definition[] = [
   ] },
   { name:'config', description:'Guild configuration', category:'Configuration', permission:'admin', subcommands:[
     { name:'view', description:'Show configuration' },
-    ...['logchannel','globalchannel'].map(name => ({ name, description:`Configure ${name}`, options:[option('value','Channel mention or ID; none to clear')] })),
+    ...['logchannel','globalchannel','appealcategory'].map(name => ({ name, description:`Configure ${name}`, options:[option('value','Mention or ID; none to clear')] })),
+    { name:'appealrole', description:'Show configured appeal roles', options:[option('action','add, remove or list'),option('role','Role mention or ID',false,false)] },
   ] },
   { name:'help', description:'Command reference and examples', category:'Help', permission:'public' },
 ];

@@ -16,6 +16,11 @@ describe('permission boundaries',()=> {
     const f=fixture([P.Administrator],'faction');f.ctx.channelId='thread';
     await expect(f.service.check(f.ctx,'global')).rejects.toThrow('Use global commands');
   });
+  it('does not apply the global command channel lock to non-global commands',async()=> {
+    const f=fixture([P.BanMembers,P.ModerateMembers],'faction');
+    f.ctx.channelId='general';
+    for (const permission of ['ban','moderator'] as const) await expect(f.service.check(f.ctx,permission)).resolves.toBeUndefined();
+  });
   it('does not grant permissions from legacy moderator roles',async()=> {
     const f=fixture();f.db.guildConfig.findUnique.mockResolvedValue({moderatorRoleId:'role'});f.member.roles.cache.set('role',{});
     await expect(f.service.check(f.ctx,'moderator')).rejects.toThrow();

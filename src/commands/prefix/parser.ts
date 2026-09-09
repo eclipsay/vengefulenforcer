@@ -14,7 +14,7 @@ export function parsePrefix(content: string, prefix: string): Invocation | null 
   }
   const options = definition.subcommands?.find(s => s.name === sub)?.options ?? definition.options ?? [];
   const args: Record<string,string> = {};
-  if (definition.name === 'globalban') {
+  if (definition.name === 'globalban' || definition.name === 'globaltempban') {
     const index = tokens.indexOf('--evidence');
     if (index >= 0) {
       if (index !== tokens.length - 2) throw new UserError('Place --evidence URL at the end of the command.');
@@ -23,7 +23,9 @@ export function parsePrefix(content: string, prefix: string): Invocation | null 
   }
   for (const o of options) {
     if (args[o.name]) continue;
-    const value = o.rest ? tokens.splice(0).join(' ') : tokens.shift();
+    const value = definition.name === 'config' && sub === 'appealrole' && o.name === 'role' && tokens[0] === undefined
+      ? undefined
+      : o.rest ? tokens.splice(0).join(' ') : tokens.shift();
     if (!value && o.required !== false) throw new UserError(`Missing ${o.name}. See ${prefix}help for syntax.`);
     if (value) args[o.name] = value;
   }
