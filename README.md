@@ -95,6 +95,7 @@ Optional server logs:
 Appeal tickets:
 
 ~~~text
+-config appealurl https://forms.gle/your-form
 -config appealcategory 123456789012345678
 -config appealrole add @Appeal Staff
 -config appealrole add @High Command
@@ -102,7 +103,7 @@ Appeal tickets:
 -config appealrole list
 ~~~
 
-Use the appeal category ID, not a normal text channel. Appeal roles control who can see new appeal channels, and you can add more than one role. When a banned user clicks the DM appeal button, Vengeful Enforcer opens a staff-side appeal channel in that category with this format: name, Discord ID, reason for ban, and why they believe they should be unbanned.
+The appeal URL controls the DM button. Use a Google Form or similar form so banned users can appeal even if they do not share a Discord server with the bot. Use the appeal category ID, not a normal text channel, if you still want staff-side appeal channels available. Appeal roles control who can see those channels, and you can add more than one role.
 
 Use -config to see the configured channels. Use none instead of a channel to clear a per-server setting.
 
@@ -133,6 +134,7 @@ Bans, global bans/unbans, warnings, notes and history support absent users by ID
 | -slowmode 10 | Slowmode seconds; 0 disables |
 | -lock / -unlock | Change and restore @everyone Send Messages |
 | -config | Show configured channels |
+| -config appealurl https://forms.gle/your-form | Set the link opened by the DM appeal button |
 | -config appealcategory CATEGORY_ID | Set the category where appeal channels are created |
 | -config appealrole add @Role | Let a role see appeal channels |
 | -config appealrole remove @Role | Remove a role from appeal channels |

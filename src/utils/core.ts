@@ -55,6 +55,13 @@ export function evidenceUrl(value: string): string {
   try { const u = new URL(value); if (['https:', 'http:'].includes(u.protocol) && value.length <= 1500) return value; } catch {}
   throw new UserError('Evidence must be an HTTP(S) URL of at most 1500 characters.');
 }
+export function httpUrl(value: string, label = 'URL'): string {
+  try {
+    const u = new URL(value);
+    if (['https:', 'http:'].includes(u.protocol) && value.length <= 1500) return value;
+  } catch {}
+  throw new UserError(`${label} must be an HTTP(S) URL of at most 1500 characters.`);
+}
 export class SerialQueue {
   private tail: Promise<unknown> = Promise.resolve();
   run<T>(fn: () => Promise<T>): Promise<T> {

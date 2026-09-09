@@ -30,7 +30,7 @@ describe('PostgreSQL migration and durable records',()=> {
   it('retains warnings, notes, global bans, registry and delivery status across engine restart',async()=> {
     await db.exec(await readFile(new URL('../prisma/migrations/20260908010000_simple_channels/migration.sql',import.meta.url),'utf8'));
     await db.exec(await readFile(new URL('../prisma/migrations/20260908020000_appeals_and_temp_bans/migration.sql',import.meta.url),'utf8'));
-    await db.exec(`INSERT INTO "GuildConfig" ("guildId","globalCommandChannelId","appealCategoryId","updatedAt") VALUES ('guild','commands','appeals',NOW());
+    await db.exec(`INSERT INTO "GuildConfig" ("guildId","globalCommandChannelId","appealCategoryId","appealUrl","updatedAt") VALUES ('guild','commands','appeals','https://forms.gle/appeal',NOW());
       UPDATE "GlobalBan" SET "expiresAt"=NOW() + INTERVAL '7 days';
       INSERT INTO "BanAppeal" ("caseId","guildId","userId","name","discordId","banReason","unbanReason","updatedAt")
       VALUES (1,'guild','123456789012345678','TestSubject','123456789012345678','Spam','I understand the rule now.',NOW());
@@ -44,6 +44,7 @@ describe('PostgreSQL migration and durable records',()=> {
     expect((await db.query<any>('SELECT status FROM "Notification"')).rows[0].status).toBe('FAILED');
     expect((await db.query<any>('SELECT "globalCommandChannelId" FROM "GuildConfig"')).rows[0].globalCommandChannelId).toBe('commands');
     expect((await db.query<any>('SELECT "appealCategoryId" FROM "GuildConfig"')).rows[0].appealCategoryId).toBe('appeals');
+    expect((await db.query<any>('SELECT "appealUrl" FROM "GuildConfig"')).rows[0].appealUrl).toBe('https://forms.gle/appeal');
     expect((await db.query<any>('SELECT name FROM "BanAppeal"')).rows[0].name).toBe('TestSubject');
     expect((await db.query<any>('SELECT "roleId" FROM "AppealRole"')).rows[0].roleId).toBe('appeal-role');
     expect((await db.query<any>('SELECT "expiresAt" IS NOT NULL AS expires FROM "GlobalBan"')).rows[0].expires).toBe(true);

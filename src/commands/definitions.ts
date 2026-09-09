@@ -26,7 +26,7 @@ export const definitions: Definition[] = [
   ] },
   { name:'config', description:'Guild configuration', category:'Configuration', permission:'admin', subcommands:[
     { name:'view', description:'Show configuration' },
-    ...['logchannel','globalchannel','appealcategory'].map(name => ({ name, description:`Configure ${name}`, options:[option('value','Mention or ID; none to clear')] })),
+    ...['logchannel','globalchannel','appealcategory','appealurl'].map(name => ({ name, description:`Configure ${name}`, options:[option('value','Mention, ID or URL; none to clear')] })),
     { name:'appealrole', description:'Show configured appeal roles', options:[option('action','add, remove or list'),option('role','Role mention or ID',false,false)] },
   ] },
   { name:'help', description:'Command reference and examples', category:'Help', permission:'public' },

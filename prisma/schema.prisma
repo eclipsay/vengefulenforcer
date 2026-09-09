@@ -95,6 +95,7 @@ model GuildConfig {
   guildId String @id
   globalCommandChannelId String?
   appealCategoryId String?
+  appealUrl String?
   logChannelId String?
   moderatorRoleId String?
   adminRoleId String?

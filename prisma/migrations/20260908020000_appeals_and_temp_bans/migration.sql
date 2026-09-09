@@ -1,4 +1,5 @@
 ALTER TABLE "GuildConfig" ADD COLUMN "appealCategoryId" TEXT;
+ALTER TABLE "GuildConfig" ADD COLUMN "appealUrl" TEXT;
 
 ALTER TABLE "GlobalBan" ADD COLUMN "expiresAt" TIMESTAMP(3);
 

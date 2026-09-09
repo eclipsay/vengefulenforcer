@@ -4,7 +4,10 @@ import { ModerationService } from '../src/services/moderationService.js';
 const record={id:42,userId:'123456789012345678',action:'WARN',scope:'LOCAL',guildName:'Test Guild',reason:'Repeated spam',createdAt:new Date('2026-09-08T12:00:00Z')};
 function notificationFixture(fail=false) {
   const send=fail ? vi.fn().mockRejectedValue(new Error('Cannot send messages to this user')) : vi.fn().mockResolvedValue({});
-  const db={notification:{findUnique:vi.fn().mockResolvedValue(null),create:vi.fn().mockResolvedValue({id:1}),update:vi.fn().mockResolvedValue({})}};
+  const db={
+    guildConfig:{findUnique:vi.fn().mockResolvedValue({appealUrl:'https://forms.gle/appeal'})},
+    notification:{findUnique:vi.fn().mockResolvedValue(null),create:vi.fn().mockResolvedValue({id:1}),update:vi.fn().mockResolvedValue({})},
+  };
   const client={users:{fetch:vi.fn().mockResolvedValue({send})}};
   return {db,client,send,service:new NotificationService(db as any,client as any)};
 }
@@ -42,10 +45,19 @@ describe('warning and ban DMs',()=> {
     expect(text).toContain('Expires: <t:1789473600:F>');
     expect(text).not.toContain('2026-09-15T12:00:00.000Z');
   });
-  it('adds an appeal button to ban notices',async()=> {
+  it('adds a link appeal button to ban notices when configured',async()=> {
     const f=notificationFixture();await f.service.send({...record,action:'BAN',scope:'LOCAL'} as any);
     const payload=f.send.mock.calls[0][0];
-    expect(payload.components[0].components[0].data.custom_id).toBe('appeal:start:42');
+    expect(payload.components[0].components[0].data.style).toBe(5);
+    expect(payload.components[0].components[0].data.url).toBe('https://forms.gle/appeal');
+    expect(payload.components[0].components[0].data.custom_id).toBeUndefined();
+  });
+  it('does not include a broken appeal button when no URL is configured',async()=> {
+    const f=notificationFixture();f.db.guildConfig.findUnique.mockResolvedValue({});
+    await f.service.send({...record,action:'BAN',scope:'LOCAL'} as any);
+    const payload=f.send.mock.calls[0][0];
+    expect(payload.components).toEqual([]);
+    expect(payload.embeds[0].toJSON().description).toContain('contact the staff team');
   });
 });
 function moderationFixture(action:string,dm='SENT') {

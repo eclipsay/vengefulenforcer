@@ -37,6 +37,7 @@ export function createRegistry(s: Services, prefix: string) {
     return say(ctx,
       'Global bans: automatically enabled in all '+s.client.guilds.cache.size+' joined servers.'+
       '\nGlobal command channel: '+(channel ? '<#'+channel+'>' : 'Not set. Use -config globalchannel #channel.')+
+      '\nAppeal form URL: '+(cfg?.appealUrl ?? 'Not set. Use -config appealurl https://forms.gle/...')+
       '\nAppeal category: '+(cfg?.appealCategoryId ? cfg.appealCategoryId : 'Not set. Use -config appealcategory CATEGORY_ID.')+
       '\nAppeal staff roles: '+(appealRoles.length ? appealRoles.map(r=>'<@&'+r.roleId+'>').join(', ') : 'Not set. Use -config appealrole add @Role.')+
       '\nLog channel: '+(cfg?.logChannelId ? '<#'+cfg.logChannelId+'>' : 'Not set (optional).'));
@@ -46,6 +47,7 @@ export function createRegistry(s: Services, prefix: string) {
     const pages = [
       { title:'Quick Start', body:`**Required setup**
 \`${prefix}config globalchannel #global-bans\`
+\`${prefix}config appealurl https://forms.gle/your-form\`
 \`${prefix}config appealcategory CATEGORY_ID\`
 \`${prefix}config appealrole add @Appeal Staff\`
 
@@ -60,11 +62,12 @@ Same as globalban, but automatically expires. Example: \`${prefix}globaltempban 
 Removes an active global ban and unbans them from every joined server.
 
 Aliases: \`${prefix}gban\`, \`${prefix}gb\`, \`${prefix}gtban\`, \`${prefix}gtb\`, \`${prefix}gunban\`.` },
-      { title:'Appeals', body:`Ban DMs include an Appeal Ban button. The user fills out name, Discord ID, reason for ban, and why they believe they should be unbanned.
+      { title:'Appeals', body:`Ban DMs include an Appeal Ban link button when an appeal URL is configured. Use a Google Form or similar page so banned users can appeal even if they do not share a server with the bot.
 
-The bot opens a staff-side channel under the configured appeal category. Only configured appeal roles and the bot can see it.
+The older Discord ticket flow can still open staff-side appeal channels, but the DM button uses the external form because it is more reliable for banned users.
 
 Setup:
+\`${prefix}config appealurl https://forms.gle/your-form\`
 \`${prefix}config appealcategory CATEGORY_ID\`
 \`${prefix}config appealrole add @Appeal Staff\`
 \`${prefix}config appealrole remove @OldRole\`
@@ -85,6 +88,7 @@ Setup:
 Raw Discord IDs and user mentions both work. Typed usernames do not.` },
       { title:'Configuration', body:`\`${prefix}config\` - show settings
 \`${prefix}config globalchannel #channel\` - where globalban/globaltempban/globalunban are allowed
+\`${prefix}config appealurl https://forms.gle/your-form\` - form opened by the DM appeal button
 \`${prefix}config appealcategory CATEGORY_ID\` - category where appeal channels are created
 \`${prefix}config appealrole add @Role\` - add a role that can see appeal channels
 \`${prefix}config appealrole remove @Role\` - remove an appeal role
